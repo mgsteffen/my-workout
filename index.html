@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Workout Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111;
+    --card: #1a1a1a;
+    --card2: #222;
+    --border: #2e2e2e;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #b8ff4f;
+    --push: #ff8c42;
+    --pull: #42c8ff;
+    --legs: #b57bff;
+    --upper: #ff6b8a;
+    --hiit: #b8ff4f;
+    --done-bg: #1a2e0a;
+    --done-text: #b8ff4f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; overflow-x: auto; scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  nav button {
+    flex-shrink: 0; padding: 14px 18px;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: .06em; cursor: pointer; transition: color .15s;
+    white-space: nowrap;
+  }
+  nav button.active { color: var(--text); }
+  nav button[data-day="0"].active { border-color: var(--push); color: var(--push); }
+  nav button[data-day="1"].active { border-color: var(--pull); color: var(--pull); }
+  nav button[data-day="2"].active { border-color: var(--legs); color: var(--legs); }
+  nav button[data-day="3"].active { border-color: var(--upper); color: var(--upper); }
+  nav button[data-day="4"].active { border-color: var(--hiit); color: var(--hiit); }
+
+  /* ── PANELS ── */
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+
+  /* ── DAY HEADER ── */
+  .day-header { margin-bottom: 16px; }
+  .day-label { font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+  .day-sub { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .day-meta { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .pill {
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    padding: 3px 9px; border-radius: 100px; border: 1px solid var(--border); color: var(--muted);
+  }
+  .pill.accent { border-color: var(--accent); color: var(--accent); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { margin-bottom: 18px; }
+  .progress-track { height: 3px; background: var(--border); border-radius: 2px; }
+  .progress-fill { height: 3px; border-radius: 2px; background: var(--accent); width: 0%; transition: width .3s; }
+  .progress-label { font-size: 11px; color: var(--muted); margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+  /* ── SUPERSET LABEL ── */
+  .ss-label {
+    font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: .08em;
+    color: var(--push); padding: 6px 12px 2px;
+    text-transform: uppercase;
+  }
+  .ss-label.pull { color: var(--pull); }
+  .ss-label.upper-a { color: #ff8c42; }
+  .ss-label.upper-b { color: #b57bff; }
+  .ss-label.upper-c { color: #ff6b8a; }
+
+  /* ── EXERCISE CARD ── */
+  .ex-card {
+    background: var(--card); border-radius: 12px;
+    margin-bottom: 8px; overflow: hidden;
+    border: 1px solid var(--border); transition: border-color .15s;
+  }
+  .ex-card.done { opacity: .45; }
+  .ex-card.done .ex-header { background: var(--done-bg); }
+
+  .ex-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 14px 14px 12px; cursor: pointer;
+  }
+
+  /* checkbox */
+  .cb {
+    width: 24px; height: 24px; border-radius: 6px; border: 1.5px solid var(--border);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all .15s; background: transparent;
+  }
+  .ex-card.done .cb { background: var(--done-bg); border-color: var(--accent); }
+  .check-icon { display: none; }
+  .ex-card.done .check-icon { display: block; }
+  .uncheck-icon { display: block; }
+  .ex-card.done .uncheck-icon { display: none; }
+
+  .ex-main { flex: 1; min-width: 0; }
+  .ex-name { font-size: 14px; font-weight: 600; line-height: 1.25; }
+  .ex-muscle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .ex-stats { display: flex; gap: 14px; flex-shrink: 0; }
+  .stat { text-align: center; }
+  .stat-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text); }
+  .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 1px; }
+
+  .chevron { color: var(--muted); font-size: 12px; flex-shrink: 0; transition: transform .2s; }
+  .ex-card.open .chevron { transform: rotate(180deg); }
+
+  /* ── DETAIL ── */
+  .ex-detail {
+    display: none; padding: 0 14px 14px 50px;
+    border-top: 1px solid var(--border);
+  }
+  .ex-card.open .ex-detail { display: block; }
+
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    padding: 12px 0 12px;
+  }
+  .dg-item { }
+  .dg-lbl { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .05em; }
+  .dg-val { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .dg-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  .detail-note {
+    font-size: 13px; color: var(--muted); line-height: 1.6;
+    padding-top: 10px; border-top: 1px solid var(--border);
+  }
+
+  .yt-link {
+    display: inline-block; margin-top: 10px;
+    font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: .05em;
+    color: var(--muted); text-decoration: none; border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 6px;
+  }
+
+  /* ── TIP ── */
+  .tip {
+    margin-top: 6px; padding: 12px 14px;
+    border-radius: 10px; background: var(--card2);
+    border-left: 3px solid var(--accent);
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  .tip b { color: var(--text); font-weight: 600; }
+
+  /* ── WEEKEND HOME BOX ── */
+  .home-box {
+    margin-top: 16px; padding: 14px;
+    border: 1px dashed var(--border); border-radius: 12px;
+  }
+  .home-title { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+  .home-ex { font-size: 13px; color: var(--muted); line-height: 1.9; }
+  .home-ex span { color: var(--text); font-weight: 500; }
+
+  /* ── RESET BUTTON ── */
+  .reset-btn {
+    display: block; width: 100%; margin-top: 20px; padding: 12px;
+    background: transparent; border: 1px solid var(--border); border-radius: 10px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: .06em; cursor: pointer; text-transform: uppercase;
+  }
+  .reset-btn:active { background: var(--card2); }
+</style>
+</head>
+<body>
+
+<nav id="nav"></nav>
+<div id="panels"></div>
+
+<script>
+const DAYS = [
+  {
+    id: 0, key: 'mon',
+    label: 'Monday', color: 'var(--push)',
+    sub: 'Push — Chest · Shoulders · Triceps',
+    pills: ['~43 min', '6 exercises', 'Dumbbell triceps'],
+    tip: 'Superset laterals + overhead extension back-to-back — saves ~5 min and keeps heart rate up.',
+    exercises: [
+      {
+        name: 'Incline machine chest press',
+        muscle: 'Upper chest · Front delt · Triceps',
+        sets: 4, reps: 10, rest: '60s', load: '35–45 kg', time: '~7 min',
+        note: 'Lower slowly (3 seconds down), press explosively. Set seat so handles are at mid-chest. The incline angle targets upper chest — better for tone than flat press.',
+      },
+      {
+        name: 'Cable chest fly — low to high',
+        muscle: 'Upper chest · Anterior delt',
+        sets: 3, reps: 12, rest: '45s', load: '10–15 kg/side', time: '~5 min',
+        note: 'Cables at lowest position. Arc hands upward and inward — like hugging a barrel. Feel the upper chest stretch at full extension on every rep.',
+      },
+      {
+        name: 'Machine shoulder press',
+        muscle: 'Deltoids · Upper traps',
+        sets: 3, reps: 12, rest: '60s', load: '30–40 kg', time: '~6 min',
+        note: 'Seated machine = spine fully supported. Press to almost straight arms — no lockout. Lower with full control. Keep core gently engaged throughout.',
+      },
+      {
+        name: 'Lateral raise — dumbbell',
+        muscle: 'Medial deltoid',
+        sets: 3, reps: 15, rest: '—', load: '7–10 kg', time: '~3 min',
+        note: 'Superset with next exercise — go straight into overhead extension with no rest. Raise to shoulder height only. If you swing, the weight is too heavy.',
+        ss: 'Superset →'
+      },
+      {
+        name: 'Overhead triceps ext. — dumbbell',
+        muscle: 'Triceps long head',
+        sets: 3, reps: 12, rest: '45s', load: '14–20 kg (1 db, 2 hands)', time: '~4 min',
+        note: 'Superset with previous exercise. Hold one dumbbell with both hands behind head, elbows pointing forward. Lower until forearms are parallel to floor, extend fully.',
+        ss: '← Superset'
+      },
+      {
+        name: 'Skull crusher — dumbbell',
+        muscle: 'Triceps (all 3 heads)',
+        sets: 3, reps: 12, rest: '30s', load: '10–14 kg/hand', time: '~4 min',
+        note: 'Lie flat on bench. Dumbbells above chest, upper arms fixed and vertical. Bend only at elbows — lower to beside your temples. Elbows must not flare outward.',
+      },
+    ]
+  },
+  {
+    id: 1, key: 'tue',
+    label: 'Tuesday', color: 'var(--pull)',
+    sub: 'Pull — Back · Biceps · Rear Delt',
+    pills: ['~41 min', '6 exercises', 'Cable-dominant'],
+    tip: 'Superset incline curl + hammer curl at the end — saves ~4 min and keeps your bicep pump going.',
+    exercises: [
+      {
+        name: 'Lat pulldown — wide grip',
+        muscle: 'Latissimus dorsi · Biceps',
+        sets: 4, reps: 10, rest: '60s', load: '50–65 kg', time: '~7 min',
+        note: 'Lean back slightly. Pull bar to upper chest — not behind neck. Feel the lats fully stretch when arms extend at the top. Pause 1s at the bottom contraction.',
+      },
+      {
+        name: 'Seated cable row — close grip',
+        muscle: 'Mid traps · Rhomboids · Lats',
+        sets: 3, reps: 12, rest: '60s', load: '50–60 kg', time: '~6 min',
+        note: 'Sit tall — no lower back rounding. Pull to lower sternum, squeeze shoulder blades together. Return with control, letting the lats stretch forward. Your current Remada baixa.',
+      },
+      {
+        name: 'Straight-arm cable pulldown',
+        muscle: 'Lats · Serratus anterior',
+        sets: 3, reps: 12, rest: '45s', load: '20–28 kg', time: '~5 min',
+        note: 'Replaces pullover machine. Cable above head, arms slightly bent. Keep them straight as you pull the bar down to your thighs in an arc. Squeeze lats at the bottom. Zero lower back involvement.',
+        badge: 'New'
+      },
+      {
+        name: 'Reverse pec deck — rear delt fly',
+        muscle: 'Rear deltoid · Rotator cuff',
+        sets: 3, reps: 15, rest: '30s', load: '20–30 kg', time: '~5 min',
+        note: 'Replaces face pull. Sit facing the pec deck pad. Grip handles with arms at shoulder height. Open arms outward and back — squeeze rear delts. Machine-guided, fully spine-safe.',
+        badge: 'New'
+      },
+      {
+        name: 'Incline dumbbell curl',
+        muscle: 'Biceps brachii · Brachialis',
+        sets: 3, reps: 12, rest: '—', load: '10–14 kg/hand', time: '~3 min',
+        note: 'Superset with hammer curl. Bench at 45–60°. Arms hang straight down. Curl without elbows coming forward. Supinate (rotate palm up) at the top of each rep.',
+        ss: 'Superset →'
+      },
+      {
+        name: 'Hammer curl — alternating',
+        muscle: 'Brachialis · Forearm',
+        sets: 2, reps: 12, rest: '30s', load: '12–16 kg/hand', time: '~3 min',
+        note: 'Superset with previous exercise. Neutral grip (palms face each other) throughout. Alternate arms. No swinging — the movement must come from the elbow only.',
+        ss: '← Superset'
+      },
+    ]
+  },
+  {
+    id: 2, key: 'wed',
+    label: 'Wednesday', color: 'var(--legs)',
+    sub: 'Legs — Quads · Glutes · Hamstrings · Calves',
+    pills: ['~47 min', '6 exercises', 'Highest calorie'],
+    tip: 'This is your hardest day — treat it as max effort. Only 90s rest on leg press. Optional: superset abductor + calf at the end to save ~4 min.',
+    exercises: [
+      {
+        name: 'Leg press 45°',
+        muscle: 'Quads · Glutes · Hamstrings',
+        sets: 4, reps: 12, rest: '90s', load: '120–140 kg', time: '~10 min',
+        note: 'Feet hip-width, mid-height on platform. Lower until knees reach ~90° — don\'t let lower back lift off seat. Don\'t lock knees at the top. Build progressively from your current load.',
+      },
+      {
+        name: 'Leg extension — machine',
+        muscle: 'Quadriceps (all 4 heads)',
+        sets: 3, reps: 15, rest: '45s', load: '40–55 kg', time: '~6 min',
+        note: 'Pad just above ankle. Extend fully, hold 1s at top, lower slowly (3 seconds down). The slow eccentric is where the tone is built. Don\'t let momentum take over.',
+      },
+      {
+        name: 'Incline machine squat (hack squat)',
+        muscle: 'Quads · Glutes · Hamstrings',
+        sets: 3, reps: 12, rest: '60s', load: '~75 kg (machine)', time: '~6 min',
+        note: 'Your current Agachamento inclinado. Machine holds the weight — lower back fully supported. Lower until thighs are parallel. Drive through heels. Knees track over toes.',
+      },
+      {
+        name: 'Seated leg curl — machine',
+        muscle: 'Hamstrings',
+        sets: 3, reps: 12, rest: '45s', load: '40–55 kg', time: '~5 min',
+        note: 'Seated curl = less lumbar pressure vs lying — safer for the hernia. Curl all the way, hold 1s, extend slowly. Keep hips pressed into the seat throughout.',
+      },
+      {
+        name: 'Abductor machine',
+        muscle: 'Glute medius · Hip abductors',
+        sets: 3, reps: 15, rest: '30s', load: '55–70 kg', time: '~4 min',
+        note: 'Press outward in a controlled arc. Don\'t slam on the return. Pause 1s at full abduction. Critical for glute shape and hip stability.',
+      },
+      {
+        name: 'Calf raise — machine or seated',
+        muscle: 'Gastrocnemius · Soleus',
+        sets: 4, reps: 15, rest: '30s', load: '80–90 kg', time: '~5 min',
+        note: 'Full range is non-negotiable: lower heels as far as possible (full stretch at bottom), rise all the way on toes, pause 1s at the top. Your current 86 kg is right.',
+      },
+    ]
+  },
+  {
+    id: 3, key: 'thu',
+    label: 'Thursday', color: 'var(--upper)',
+    sub: 'Upper — Chest + Back · Shoulders · Supersets',
+    pills: ['~38 min', '3 superset pairs', 'Higher HR'],
+    tip: 'All exercises are supersets — do each pair back-to-back with no rest between. Go 10–15% lighter than you would alone. HR stays at 130–145 the whole session.',
+    exercises: [
+      {
+        name: 'A1 · Machine chest press',
+        muscle: 'Chest · Front delt · Triceps',
+        sets: 3, reps: 12, rest: '→ A2', load: '35–45 kg', time: '',
+        note: 'Do A1 then immediately A2, then rest 60s. Chest and back alternate — one rests while the other works.',
+        ss: 'Superset A'
+      },
+      {
+        name: 'A2 · Seated cable row — wide grip',
+        muscle: 'Upper back · Rhomboids · Rear delt',
+        sets: 3, reps: 12, rest: '60s after pair', load: '45–55 kg', time: '~8 min',
+        note: 'Wide bar, pull to sternum. Sit tall, don\'t round. Go immediately after A1.',
+        ss: 'Superset A'
+      },
+      {
+        name: 'B1 · Pec deck — machine fly',
+        muscle: 'Chest inner · Stretch emphasis',
+        sets: 3, reps: 12, rest: '→ B2', load: '30–40 kg', time: '',
+        note: 'Do B1 then immediately B2, then rest 45s. Sit with elbows on pads at shoulder height. Open fully at back for a deep stretch.',
+        ss: 'Superset B'
+      },
+      {
+        name: 'B2 · Lat pulldown — reverse grip',
+        muscle: 'Lats · Biceps · Lower traps',
+        sets: 3, reps: 12, rest: '45s after pair', load: '45–55 kg', time: '~8 min',
+        note: 'Underhand grip, shoulder-width. Pull to upper chest. Changes lat angle vs Tuesday — intentional variety.',
+        ss: 'Superset B'
+      },
+      {
+        name: 'C1 · Dumbbell shoulder press',
+        muscle: 'Deltoids · Upper traps · Triceps',
+        sets: 3, reps: 12, rest: '→ C2', load: '18–24 kg/hand', time: '',
+        note: 'Do C1 then immediately C2, then rest 45s. Seated, neutral grip (palms facing each other) — gentler on shoulders.',
+        ss: 'Superset C'
+      },
+      {
+        name: 'C2 · Reverse pec deck — rear delt',
+        muscle: 'Rear delt · Rotator cuff',
+        sets: 3, reps: 15, rest: '45s after pair', load: '20–28 kg', time: '~8 min',
+        note: 'Same movement as Tuesday. Doing this twice a week protects your shoulders from all the pressing volume.',
+        ss: 'Superset C'
+      },
+    ]
+  },
+  {
+    id: 4, key: 'fri',
+    label: 'Friday', color: 'var(--hiit)',
+    sub: 'Core + HIIT — Fat burn finisher',
+    pills: ['~27 min gym', '+ weekend home', 'Max calorie spike'],
+    tip: 'HIIT: 8 rounds of 30s max effort / 60s easy on bike or rower. This pushes HR to 150+ and is the biggest fat-burn driver of the week.',
+    exercises: [
+      {
+        name: 'Ab wheel rollout — from knees',
+        muscle: 'Deep core · Rectus abdominis · Lats',
+        sets: 3, reps: 10, rest: '30s', load: 'Bodyweight', time: '~4 min',
+        note: 'Roll forward as far as possible keeping lower back flat — not arched. Roll back using abs only. Start with short range and extend over weeks. Best hernia-safe anti-extension exercise.',
+      },
+      {
+        name: 'Pallof press — cable',
+        muscle: 'Anti-rotation core · Obliques',
+        sets: 3, reps: '10/side', rest: '30s', load: '10–15 kg', time: '~5 min',
+        note: 'Stand sideways to cable at chest height. Hold handle with both hands at sternum, press arms straight out, hold 2s, return. Core fights rotation the whole time — zero spinal flexion. Ideal for hernias.',
+      },
+      {
+        name: 'HIIT — bike or rower',
+        muscle: 'Full body · Cardio · Fat burn',
+        sets: '8 rds', reps: '30s on / 60s off', rest: 'Built-in', load: 'Max effort', time: '~15 min',
+        note: 'RPE 8–9 during hard intervals. Stationary bike or rowing machine — no treadmill (spinal impact). Add 3 min easy warm-up before starting. This is the most important 15 min of your week for fat loss.',
+      },
+    ],
+    homeBox: true
+  },
+];
+
+function ytUrl(name) {
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(name + ' exercise form');
+}
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+  DAYS.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = labels[i];
+    btn.dataset.day = i;
+    btn.className = i === 0 ? 'active' : '';
+    btn.onclick = () => switchDay(i);
+    nav.appendChild(btn);
+  });
+}
+
+function getSsColor(ss) {
+  if (!ss) return '';
+  if (ss.includes('A')) return 'var(--push)';
+  if (ss.includes('B')) return 'var(--legs)';
+  if (ss.includes('C')) return 'var(--upper)';
+  return 'var(--pull)';
+}
+
+function buildPanels() {
+  const container = document.getElementById('panels');
+
+  DAYS.forEach((day, di) => {
+    const panel = document.createElement('div');
+    panel.className = 'panel' + (di === 0 ? ' active' : '');
+    panel.id = 'panel-' + di;
+
+    const pillsHtml = day.pills.map(p =>
+      `<span class="pill">${p}</span>`
+    ).join('');
+
+    let html = `
+      <div class="day-header">
+        <div class="day-label" style="color:${day.color}">${day.label}</div>
+        <div class="day-sub">${day.sub}</div>
+        <div class="day-meta">${pillsHtml}</div>
+      </div>
+      <div class="progress-wrap" id="prog-wrap-${di}">
+        <div class="progress-track"><div class="progress-fill" id="prog-${di}"></div></div>
+        <div class="progress-label" id="prog-lbl-${di}">0 / ${day.exercises.length} done</div>
+      </div>
+    `;
+
+    // Track last ss group to avoid duplicate labels
+    let lastSs = '';
+    day.exercises.forEach((ex, ei) => {
+      // Superset label
+      if (ex.ss && ex.ss !== lastSs) {
+        lastSs = ex.ss;
+        html += `<div class="ss-label" style="color:${getSsColor(ex.ss)}">${ex.ss}</div>`;
+      } else if (!ex.ss) {
+        lastSs = '';
+      }
+
+      const badgeHtml = ex.badge
+        ? `<span style="font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;background:#0a2e1a;color:var(--accent);border:1px solid var(--accent);margin-left:6px">${ex.badge}</span>`
+        : '';
+
+      html += `
+        <div class="ex-card" id="card-${di}-${ei}">
+          <div class="ex-header" onclick="toggleCard(${di},${ei})">
+            <div class="cb" onclick="toggleDone(event,${di},${ei})">
+              <svg class="check-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <polyline points="2,7 5,10 11,3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg class="uncheck-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+              </svg>
+            </div>
+            <div class="ex-main">
+              <div class="ex-name">${ex.name}${badgeHtml}</div>
+              <div class="ex-muscle">${ex.muscle}</div>
+            </div>
+            <div class="ex-stats">
+              <div class="stat">
+                <div class="stat-val">${ex.sets}×${ex.reps}</div>
+                <div class="stat-lbl">Sets</div>
+              </div>
+              <div class="stat">
+                <div class="stat-val">${ex.rest}</div>
+                <div class="stat-lbl">Rest</div>
+              </div>
+            </div>
+            <div class="chevron">▾</div>
+          </div>
+          <div class="ex-detail">
+            <div class="detail-grid">
+              <div class="dg-item">
+                <div class="dg-lbl">Load</div>
+                <div class="dg-val" style="font-size:13px">${ex.load}</div>
+                <div class="dg-sub">Starting point</div>
+              </div>
+              <div class="dg-item">
+                <div class="dg-lbl">Rest</div>
+                <div class="dg-val" style="font-size:13px">${ex.rest}</div>
+                <div class="dg-sub">Between sets</div>
+              </div>
+              <div class="dg-item">
+                <div class="dg-lbl">Est. time</div>
+                <div class="dg-val" style="font-size:13px">${ex.time || '~8 min'}</div>
+                <div class="dg-sub">Incl. rest</div>
+              </div>
+            </div>
+            <div class="detail-note">${ex.note}</div>
+            <a class="yt-link" href="${ytUrl(ex.name)}" target="_blank">▶ Watch on YouTube</a>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `<div class="tip"><b>Tip:</b> ${day.tip}</div>`;
+
+    if (day.homeBox) {
+      html += `
+        <div class="home-box">
+          <div class="home-title">Weekend — Home core (15 min, Sat or Sun)</div>
+          <div class="home-ex">
+            <span>Plank — forearms</span> · 3×45s, rest 30s<br>
+            <span>Side plank</span> · 2×30s per side, rest 20s<br>
+            <span>Dead bug — slow</span> · 3×8 per side, rest 30s<br>
+            <span>Bird dog</span> · 2×10 per side, hold 2s each
+          </div>
+        </div>
+      `;
+    }
+
+    html += `<button class="reset-btn" onclick="resetDay(${di})">Reset day</button>`;
+
+    panel.innerHTML = html;
+    container.appendChild(panel);
+  });
+}
+
+function toggleCard(di, ei) {
+  const card = document.getElementById(`card-${di}-${ei}`);
+  // Close others
+  document.querySelectorAll('.ex-card.open').forEach(c => {
+    if (c !== card) c.classList.remove('open');
+  });
+  card.classList.toggle('open');
+}
+
+function toggleDone(e, di, ei) {
+  e.stopPropagation();
+  const card = document.getElementById(`card-${di}-${ei}`);
+  card.classList.toggle('done');
+  updateProgress(di);
+  // save state
+  saveState();
+}
+
+function updateProgress(di) {
+  const day = DAYS[di];
+  const total = day.exercises.length;
+  const done = document.querySelectorAll(`#panel-${di} .ex-card.done`).length;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById(`prog-${di}`).style.width = pct + '%';
+  document.getElementById(`prog-lbl-${di}`).textContent = `${done} / ${total} done`;
+}
+
+function resetDay(di) {
+  document.querySelectorAll(`#panel-${di} .ex-card`).forEach(c => c.classList.remove('done', 'open'));
+  updateProgress(di);
+  saveState();
+}
+
+function switchDay(i) {
+  document.querySelectorAll('.panel').forEach((p, idx) => p.classList.toggle('active', idx === i));
+  document.querySelectorAll('nav button').forEach((b, idx) => b.classList.toggle('active', idx === i));
+  document.querySelectorAll('.ex-card.open').forEach(c => c.classList.remove('open'));
+}
+
+// ── Simple localStorage persistence ──
+function saveState() {
+  const state = {};
+  DAYS.forEach((d, di) => {
+    state[di] = [];
+    document.querySelectorAll(`#panel-${di} .ex-card`).forEach((c, ei) => {
+      state[di][ei] = c.classList.contains('done');
+    });
+  });
+  try { localStorage.setItem('wk_state', JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('wk_state');
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    Object.entries(state).forEach(([di, arr]) => {
+      arr.forEach((done, ei) => {
+        if (done) {
+          const card = document.getElementById(`card-${di}-${ei}`);
+          if (card) card.classList.add('done');
+        }
+      });
+      updateProgress(parseInt(di));
+    });
+  } catch(e) {}
+}
+
+buildNav();
+buildPanels();
+loadState();
+</script>
+</body>
+</html>
